@@ -364,9 +364,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     continue;
                 }
                 Model model = definitions.get(name);
-                Map<String, Model> modelMap = new HashMap<String, Model>();
-                modelMap.put(name, model);
-                Map<String, Object> models = processModels(config, modelMap, definitions);
+                Map<String, Object> models = processModel(config, name, model, definitions);
                 if (models != null) {
                     models.put("classname", config.toModelName(name));
                     models.putAll(config.additionalProperties());
@@ -1011,31 +1009,29 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     }
 
 
-    private Map<String, Object> processModels(CodegenConfig config, Map<String, Model> definitions, Map<String, Model> allDefinitions) {
+    private Map<String, Object> processModel(CodegenConfig config, String name, Model model, Map<String, Model> allDefinitions) {
         Map<String, Object> objs = new HashMap<String, Object>();
         objs.put("package", config.modelPackage());
         List<Object> models = new ArrayList<Object>();
         Set<String> allImports = new LinkedHashSet<String>();
-        for (String key : definitions.keySet()) {
-            Model mm = definitions.get(key);
-            if(mm.getVendorExtensions() !=  null && mm.getVendorExtensions().containsKey("x-codegen-ignore")) {
-                // skip this model
-                LOGGER.debug("skipping model " + key);
-                return null;
-            }
-            else if(mm.getVendorExtensions() !=  null && mm.getVendorExtensions().containsKey("x-codegen-import-mapping")) {
-                String codegenImport = mm.getVendorExtensions().get("x-codegen-import-mapping").toString();
-                config.importMapping().put(key, codegenImport);
-                allImports.add(codegenImport);
-            }
-            CodegenModel cm = config.fromModel(key, mm, allDefinitions);
-            Map<String, Object> mo = new HashMap<String, Object>();
-            mo.put("model", cm);
-            mo.put("importPath", config.toModelImport(cm.classname));
-            models.add(mo);
-
-            allImports.addAll(cm.imports);
+        if(model.getVendorExtensions() !=  null && model.getVendorExtensions().containsKey("x-codegen-ignore")) {
+            // skip this model
+            LOGGER.debug("skipping model " + name);
+            return null;
         }
+        else if(model.getVendorExtensions() !=  null && model.getVendorExtensions().containsKey("x-codegen-import-mapping")) {
+            String codegenImport = model.getVendorExtensions().get("x-codegen-import-mapping").toString();
+            config.importMapping().put(name, codegenImport);
+            allImports.add(codegenImport);
+        }
+        CodegenModel cm = config.fromModel(name, model, allDefinitions);
+        Map<String, Object> mo = new HashMap<String, Object>();
+        mo.put("model", cm);
+        mo.put("importPath", config.toModelImport(cm.classname));
+        models.add(mo);
+
+        allImports.addAll(cm.imports);
+
         objs.put("models", models);
         Set<String> importSet = new TreeSet<String>();
         for (String nextImport : allImports) {
